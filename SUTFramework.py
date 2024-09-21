@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-import inspect
+import argparse
 
 import mlperf_loadgen as lg
 
@@ -9,6 +9,26 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("MlperfBenchMark")
 
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        choices=[
+            "Offline",
+            "Server"],
+        default="Offline",
+        help="Scenario")
+    parser.add_argument(
+        "--output-log-dir",
+        type=str,
+        default="output-logs",
+        help="Where logs are saved")
+    args = parser.parse_args()
+    return args
+
+    
 class Dataset:
     def __init__(self):
         print("dataset.__init__")
@@ -59,16 +79,25 @@ class SUT:
         
     def __del__(self):
         pass
+
+scenario_map = {
+    "offline": lg.TestScenario.Offline,
+    "server": lg.TestScenario.Server,
+}
+
+
         
 
 def main():
+    
+    args = get_args()
     settings = lg.TestSettings()
-    settings.scenario = lg.TestScenario.SingleStream
+    settings.scenario = scenario_map[args.scenario.lower()]
     settings.mode = lg.TestMode.PerformanceOnly
      
-    os.makedirs("./output_log_dir", exist_ok=True)
+    os.makedirs(args.output_log_dir, exist_ok=True)
     log_output_settings = lg.LogOutputSettings()
-    log_output_settings.outdir = "./output_log_dir"
+    log_output_settings.outdir = args.output_log_dir
     log_output_settings.copy_summary_to_stdout = True
     log_settings = lg.LogSettings()
     log_settings.log_output = log_output_settings
