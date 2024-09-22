@@ -1,7 +1,15 @@
 import os
 import time
 import logging
-import argparse
+from absl import flags, app
+
+FLAGS = flags.FLAGS
+flags.DEFINE_enum('scenario', 'Offline', ['Offline', 'Server', 'SingleStream'], 'Scenario')
+flags.DEFINE_string('output_log_dir', 'output-logs', 'Where logs are saved')
+flags.DEFINE_bool('accuracy', False, 'Run accuracy mode')
+flags.DEFINE_string('mlperf_conf', 'mlperf.conf', 'mlperf rules config')
+flags.DEFINE_string('user_conf', 'user.conf', 'User config for LoadGen settings such as target QPS')
+flags.DEFINE_string('audit_conf', 'audit.conf', 'Audit config for LoadGen settings during compliance runs')
 
 import mlperf_loadgen as lg
 
@@ -9,18 +17,6 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("MlperfBenchMark")
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", type=str, choices=[ "Offline", "Server", "SingleStream"], default="Offline", help="Scenario")
-    parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
-    parser.add_argument("--accuracy", action="store_true", help="Run accuracy mode")
-    parser.add_argument("--mlperf-conf", type=str, default="mlperf.conf", help="mlperf rules config")
-    parser.add_argument("--user-conf", type=str, default="user.conf", help="user config for user LoadGen settings such as target QPS")
-    parser.add_argument("--audit-conf", type=str, default="audit.conf", help="audit config for LoadGen settings during compliance runs")
-    args = parser.parse_args()
-    return args
-
-    
 class Dataset:
     def __init__(self):
         print("dataset.__init__")
@@ -79,21 +75,17 @@ scenario_map = {
 }
 
 
-        
-
-def main():
-    
-    args = get_args()
+def main(argv):
     settings = lg.TestSettings()
-    settings.scenario = scenario_map[args.scenario.lower()]
-    settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
-    settings.FromConfig(args.user_conf, "llama2-70b", args.scenario)
+    settings.scenario = scenario_map[FLAGS.scenario.lower()]
+    settings.FromConfig(FLAGS.mlperf_conf, "llama2-70b", FLAGS.scenario)
+    settings.FromConfig(FLAGS.user_conf, "llama2-70b", FLAGS.scenario)
     
     settings.mode = lg.TestMode.PerformanceOnly
      
-    os.makedirs(args.output_log_dir, exist_ok=True)
+    os.makedirs(FLAGS.output_log_dir, exist_ok=True)
     log_output_settings = lg.LogOutputSettings()
-    log_output_settings.outdir = args.output_log_dir
+    log_output_settings.outdir = FLAGS.output_log_dir
     log_output_settings.copy_summary_to_stdout = True
     log_settings = lg.LogSettings()
     log_settings.log_output = log_output_settings
@@ -104,7 +96,7 @@ def main():
     sut.start()
     logSUT = lg.ConstructSUT(sut.issue_queries, sut.flush_queries)
     log.info("Starting Benchmark run")
-    lg.StartTestWithLogSettings(logSUT, sut.qsl, settings, log_settings, args.audit_conf)
+    lg.StartTestWithLogSettings(logSUT, sut.qsl, settings, log_settings, FLAGS.audit_conf)
     sut.stop()
     log.info("Run Completed!")
     log.info("Destroying SUT...") 
@@ -113,7 +105,7 @@ def main():
     lg.DestroyQSL(sut.qsl)
         
 if __name__ == "__main__":
-    main()
+    app.run(main)
         
         
       
