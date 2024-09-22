@@ -85,10 +85,8 @@ def main():
     args = get_args()
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
-    
     settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
     settings.FromConfig(args.user_conf, "llama2-70b", args.scenario)
-
     
     settings.mode = lg.TestMode.PerformanceOnly
      
