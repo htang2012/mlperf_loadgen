@@ -11,20 +11,12 @@ log = logging.getLogger("MlperfBenchMark")
 
 def get_args():
     parser = argparse.ArgumentParser()
-    
-    parser.add_argument(
-        "--scenario",
-        type=str,
-        choices=[
-            "Offline",
-            "Server"],
-        default="Offline",
-        help="Scenario")
-    parser.add_argument(
-        "--output-log-dir",
-        type=str,
-        default="output-logs",
-        help="Where logs are saved")
+    parser.add_argument("--scenario", type=str, choices=[ "Offline", "Server"], default="Offline", help="Scenario")
+    parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
+    parser.add_argument("--accuracy", action="store_true", help="Run accuracy mode")
+    parser.add_argument("--mlperf-conf", type=str, default="mlperf.conf", help="mlperf rules config")
+    parser.add_argument("--user-conf", type=str, default="user.conf", help="user config for user LoadGen settings such as target QPS")
+    parser.add_argument("--audit-conf", type=str, default="audit.conf", help="audit config for LoadGen settings during compliance runs")
     args = parser.parse_args()
     return args
 
@@ -93,6 +85,11 @@ def main():
     args = get_args()
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
+    
+    settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
+    settings.FromConfig(args.user_conf, "llama2-70b", args.scenario)
+
+    
     settings.mode = lg.TestMode.PerformanceOnly
      
     os.makedirs(args.output_log_dir, exist_ok=True)
@@ -101,15 +98,14 @@ def main():
     log_output_settings.copy_summary_to_stdout = True
     log_settings = lg.LogSettings()
     log_settings.log_output = log_output_settings
-    log_settings.enable_trace = True
+    log_settings.enable_trace = False 
 
     sut = SUT() 
       
     sut.start()
     logSUT = lg.ConstructSUT(sut.issue_queries, sut.flush_queries)
     log.info("Starting Benchmark run")
-    #lg.StartTestWithLogSettings(logSUT, sut.qsl, settings, log_settings, "audit.conf" )
-    lg.StartTestWithLogSettings(logSUT, sut.qsl, settings, log_settings)
+    lg.StartTestWithLogSettings(logSUT, sut.qsl, settings, log_settings, args.audit_conf)
     sut.stop()
     log.info("Run Completed!")
     log.info("Destroying SUT...") 
