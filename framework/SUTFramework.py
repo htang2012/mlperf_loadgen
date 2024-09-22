@@ -11,7 +11,7 @@ log = logging.getLogger("MlperfBenchMark")
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", type=str, choices=[ "Offline", "Server"], default="Offline", help="Scenario")
+    parser.add_argument("--scenario", type=str, choices=[ "Offline", "Server", "SingleStream"], default="Offline", help="Scenario")
     parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
     parser.add_argument("--accuracy", action="store_true", help="Run accuracy mode")
     parser.add_argument("--mlperf-conf", type=str, default="mlperf.conf", help="mlperf rules config")
@@ -75,6 +75,7 @@ class SUT:
 scenario_map = {
     "offline": lg.TestScenario.Offline,
     "server": lg.TestScenario.Server,
+    "singlestream": lg.TestScenario.SingleStream,
 }
 
 
