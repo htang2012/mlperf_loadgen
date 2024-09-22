@@ -17,56 +17,86 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("MlperfBenchMark")
 
 
-class Dataset:
+class QSL:
     def __init__(self):
-        print("dataset.__init__")
+        print("QSL.__init__")
         pass
+    
     def LoadSamplesToRam(self, query_samples):
         del query_samples
-        print("dataset.LoadSamplesToRam")
+        print("QSL.LoadSamplesToRam")
         return 
-     
+    
     def UnloadSamplesFromRam(self, query_samples):
         del query_samples
-        print("dataset.UnloadSamplesFromRam")
+        print("QSL.UnloadSamplesFromRam")
         return 
-       
+    
     def __del__(self):
-        print("dataset.__del__")
+        print("QSL.__del__")
         pass
 
-class SUT:
-    def __init__(self):
-        print("__init__")
-        self.dataset = Dataset()
-        self.qsl = lg.ConstructQSL(100, 10, self.dataset.LoadSamplesToRam, self.dataset.UnloadSamplesFromRam) 
-        pass
+
+class QDL:
+    def __init__(self, qsl):
+        print("QDL.__init__")
+        self.qsl = qsl
+    
     def process_queries(self):
-        print("SUT.process_queries")
-        pass       
+        print("QDL.process_queries")
+        pass
+    
     def issue_queries(self, query_samples):
-        print("SUT.issue_queries")
+        print("QDL.issue_queries")
         responses = []
         for s in query_samples:
             responses.append(lg.QuerySampleResponse(s.id, 0, 0))
         lg.QuerySamplesComplete(responses)
-        
-        return 
-      
+        return
+    
     def flush_queries(self):
-        print("SUT.flush_queeries")
+        print("QDL.flush_queries")
         pass
-        
+    
     def start(self):
-        print("SUT.start") 
-        pass     
-        
-    def stop(self):
-        print("SUT.stop")
-        pass 
-        
-    def __del__(self):
+        print("QDL.start")
         pass
+    
+    def stop(self):
+        print("QDL.stop")
+        pass
+    
+    def __del__(self):
+        print("QDL.__del__")
+        pass
+
+
+class SUT:
+    def __init__(self):
+        print("SUT.__init__")
+        self.qsl = QSL()
+        self.qdl = QDL(self.qsl)
+        self.qsl_handle = lg.ConstructQSL(100, 10, self.qsl.LoadSamplesToRam, self.qsl.UnloadSamplesFromRam)
+    
+    def process_queries(self):
+        self.qdl.process_queries()
+    
+    def issue_queries(self, query_samples):
+        self.qdl.issue_queries(query_samples)
+    
+    def flush_queries(self):
+        self.qdl.flush_queries()
+    
+    def start(self):
+        self.qdl.start()
+    
+    def stop(self):
+        self.qdl.stop()
+    
+    def __del__(self):
+        print("SUT.__del__")
+        pass
+
 
 scenario_map = {
     "offline": lg.TestScenario.Offline,
@@ -91,21 +121,32 @@ def main(argv):
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = False 
 
-    sut = SUT() 
+    # Create the SUT (System Under Test) instance
+    sut = SUT()
       
     sut.start()
-    logSUT = lg.ConstructSUT(sut.issue_queries, sut.flush_queries)
+    log_sut = lg.ConstructSUT(sut.issue_queries, sut.flush_queries)
+    
     log.info("Starting Benchmark run")
-    lg.StartTestWithLogSettings(logSUT, sut.qsl, settings, log_settings, FLAGS.audit_conf)
+    
+    # Start the test with the log settings, the SUT, and the test settings
+    lg.StartTestWithLogSettings(log_sut, sut.qsl_handle, settings, log_settings, FLAGS.audit_conf)
+    
     sut.stop()
+
     log.info("Run Completed!")
     log.info("Destroying SUT...") 
-    lg.DestroySUT(logSUT)
+    
+    # Destroy the SUT after test completion
+    lg.DestroySUT(log_sut)
+    
     log.info("Destroying QSL...")
-    lg.DestroyQSL(sut.qsl)
+    
+    # Destroy the QSL as well
+    lg.DestroyQSL(sut.qsl_handle)
         
 if __name__ == "__main__":
     app.run(main)
-        
+
         
       
