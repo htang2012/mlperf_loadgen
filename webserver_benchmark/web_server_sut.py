@@ -130,7 +130,7 @@ def main(argv):
     # Now run your MLPerf LoadGen test using these args
     dataset = Dataset()
     qsl = QSL(dataset, 100, 10)
-    sut = WebServerSUT("http://127.0.0.1:5000", qsl)
+    sut = WebServerSUT("http://127.0.0.1:8000", qsl)
 
     sut.run_benchmark(args)
 
