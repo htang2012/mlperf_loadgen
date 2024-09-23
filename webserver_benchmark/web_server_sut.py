@@ -24,26 +24,32 @@ scenario_map = {
     "server": lg.TestScenario.Server
 }
 
-# Dataset class is a placeholder for compatibility
-class Dataset:
+# QDL (Query Data Layer)
+class QDL:
     def __init__(self):
-        log.info("Dataset initialized")
+        log.info("QDL: Initializing dataset")
 
     def load_samples_to_ram(self, query_samples):
-        log.info(f"Loading samples to RAM: {query_samples}")
+        del query_samples
+        log.info("QDL: Loading samples to RAM")
+        return
 
     def unload_samples_from_ram(self, query_samples):
-        log.info(f"Unloading samples from RAM: {query_samples}")
+        del query_samples
+        log.info("QDL: Unloading samples from RAM")
+        return
 
+    def __del__(self):
+        log.info("QDL: Dataset cleanup")
 
-# QSL for Web Testing
+# QSL (Query Service Layer)
 class QSL:
-    def __init__(self, dataset, num_samples, num_sample_indices):
+    def __init__(self, qdl, num_samples, num_sample_indices):
         log.info(f"QSL: Constructing with {num_samples} samples")
         self.qsl = lg.ConstructQSL(
             num_samples, num_sample_indices,
-            dataset.load_samples_to_ram,
-            dataset.unload_samples_from_ram
+            qdl.load_samples_to_ram,
+            qdl.unload_samples_from_ram
         )
 
     def __del__(self):
@@ -51,9 +57,21 @@ class QSL:
         lg.DestroyQSL(self.qsl)
 
 
-# SUT for Testing Flask Web Server
-class WebServerSUT:
+# SUT (System Under Test)
+class SUT:
+    def __init__(self):
+        log.info("SUT: Initializing system under test")
+
+    def start(self):
+        log.info("SUT: Starting the system")
+
+    def stop(self):
+        log.info("SUT: Stopping the system")
+
+# SUT (WebServer System Under Test)
+class WebServerSUT(SUT):
     def __init__(self, base_url, qsl):
+        super().__init__()
         self.base_url = base_url
         self.qsl = qsl
         log.info(f"SUT: Initialized with base URL: {self.base_url}")
@@ -128,8 +146,8 @@ def main(argv):
     }
 
     # Now run your MLPerf LoadGen test using these args
-    dataset = Dataset()
-    qsl = QSL(dataset, 100, 10)
+    qdl = QDL()
+    qsl = QSL(qdl, 100, 10)
     sut = WebServerSUT("http://127.0.0.1:8000", qsl)
 
     sut.run_benchmark(args)
